@@ -26,7 +26,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 10
     DAILY_BUDGET_USD: float = 1.0
 
-    # Pydantic sẽ tự động đọc từ file .env nếu có
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Cấu hình ưu tiên đọc từ Environment Variables của Cloud (Railway)
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding='utf-8',
+        extra="ignore",
+        case_sensitive=True 
+    )
 
 settings = Settings()
