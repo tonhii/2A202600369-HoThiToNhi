@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     PORT: int = 8000
     HOST: str = "0.0.0.0"
 
-    # Security
-    AGENT_API_KEY: str = "demo-secret-key-change-me"
+    # Security - Ép đọc trực tiếp từ Environment để tránh lỗi Cloud
+    import os
+    AGENT_API_KEY: str = os.getenv("AGENT_API_KEY") or "demo-secret-key-change-me"
     ALLOWED_ORIGINS: List[str] = ["*"]
 
     # LLM Config

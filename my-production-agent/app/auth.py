@@ -16,8 +16,8 @@ def verify_api_key(api_key: str = Security(api_key_header)) -> str:
     provided_key = api_key.strip() if api_key else ""
 
     if not provided_key or provided_key != expected_key:
-        # Log độ dài để kiểm tra lệch ký tự (không lộ key)
-        print(f"DEBUG: Auth failed. Expected len: {len(expected_key)}, Got len: {len(provided_key)}")
+        # Log chẩn đoán nâng cao (ẩn danh)
+        print(f"DEBUG: Auth failed. Expected: {expected_key[:2]}...(len:{len(expected_key)}), Got: {provided_key[:2]}...(len:{len(provided_key)})")
         raise HTTPException(
             status_code=401,
             detail="Tín hiệu không hợp lệ! Vui lòng cung cấp 'X-API-Key' chính xác trong Header."
