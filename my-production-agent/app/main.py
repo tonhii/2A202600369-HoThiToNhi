@@ -22,6 +22,9 @@ _is_ready = False
 async def lifespan(app: FastAPI):
     global _is_ready
     logger.info(json.dumps({"event": "startup", "msg": "Agent starting up..."}))
+    # Debug: In ra tên các biến môi trường đang có (chỉ in key để bảo mật)
+    import os
+    logger.info(f"Available ENVs: {list(os.environ.keys())}")
     _is_ready = True
     yield
     _is_ready = False
