@@ -11,13 +11,15 @@ def verify_api_key(api_key: str = Security(api_key_header)) -> str:
     Nếu sai hoặc thiếu -> Trả về lỗi 401 Unauthorized.
     Nếu đúng -> Trả về ID của user (giả lập).
     """
-    # Tự động loại bỏ khoảng trắng để tránh lỗi copy-paste
-    expected_key = settings.AGENT_API_KEY.strip()
-    provided_key = api_key.strip() if api_key else ""
+    # Xử lý triệt để khoảng trắng và ký tự xuống dòng từ Windows/Unix
+    expected_key = settings.AGENT_API_KEY.strip().replace('\r', '').replace('\n', '')
+    provided_key = api_key.strip().replace('\r', '').replace('\n', '') if api_key else ""
 
     if not provided_key or provided_key != expected_key:
-        # Log chẩn đoán nâng cao (ẩn danh)
-        print(f"DEBUG: Auth failed. Expected: {expected_key[:2]}...(len:{len(expected_key)}), Got: {provided_key[:2]}...(len:{len(provided_key)})")
+        # Log mã Hex để tìm ký tự ẩn nếu vẫn không khớp
+        expected_hex = expected_key.encode().hex()[:4]
+        provided_hex = provided_key.encode().hex()[:4]
+        print(f"DEBUG: Auth failed. Expected(hex_prefix): {expected_hex}, Got(hex_prefix): {provided_hex}")
         raise HTTPException(
             status_code=401,
             detail="Tín hiệu không hợp lệ! Vui lòng cung cấp 'X-API-Key' chính xác trong Header."
