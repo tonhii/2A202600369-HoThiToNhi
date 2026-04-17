@@ -25,7 +25,3 @@ COPY utils/ ./utils/
 
 # Thiết lập biến môi trường
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
-
-# Chạy ứng dụng bằng uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

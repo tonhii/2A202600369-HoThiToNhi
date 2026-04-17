@@ -44,8 +44,8 @@
 ## Part 3: Cloud Deployment
 
 ### Exercise 3.1: Railway deployment
-- URL: https://2a202600369-hothitonhi-day12-production.up.railway.app
-- Screenshot: ![alt text](railway_deployment.png)
+- URL: https://2a202600369-hothitonhi-production.up.railway.app
+- Screenshot: ![alt text](railway_deployment.png) (Đã xác nhận Deployment ACTIVE)
 
 ## Part 4: API Security
 
@@ -58,7 +58,12 @@
 
 **2. Truyền đúng API Key qua Header (Exercise 4.1):**
 ```json
-{"question":"hello","answer":"Đây là câu trả lời từ AI agent (mock). Trong production, đây sẽ là response từ OpenAI/Anthropic."}
+{
+  "question": "Toi_da_hoan_thanh_bai_tap",
+  "answer": "Tôi là AI agent được deploy lên cloud. Câu hỏi của bạn đã được nhận.",
+  "user_id": "user_premium_01",
+  "served_by": "production-agent-final"
+}
 ```
 
 **3. Sử dụng JWT Token (Exercise 4.2):**

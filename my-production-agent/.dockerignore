@@ -1,0 +1,15 @@
+# Docker Ignore File
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+.git/
+.gitignore
+.dockerignore
+docker-compose.yml
+docker-compose.local.yml
+.ipynb_checkpoints
+*.log
