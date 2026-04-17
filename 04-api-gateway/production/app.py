@@ -13,14 +13,14 @@ Chạy:
     python app.py
 
 Lấy token:
-    curl -X POST http://localhost:8000/auth/token \\
-         -H "Content-Type: application/json" \\
+    curl -X POST http://localhost:8000/auth/token \
+         -H "Content-Type: application/json" \
          -d '{"username": "student", "password": "demo123"}'
 
 Dùng token:
-    curl -H "Authorization: Bearer <token>" \\
-         -X POST http://localhost:8000/ask \\
-         -H "Content-Type: application/json" \\
+    curl -H "Authorization: Bearer <token>" \
+         -X POST http://localhost:8000/ask \
+         -H "Content-Type: application/json" \
          -d '{"question": "what is docker?"}'
 """
 import os
@@ -28,7 +28,6 @@ import time
 import logging
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
-
 
 from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,7 +39,10 @@ from rate_limiter import rate_limiter_user, rate_limiter_admin
 from cost_guard import cost_guard
 from utils.mock_llm import ask
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 START_TIME = time.time()
@@ -57,13 +59,25 @@ app = FastAPI(
     title="Agent — Full Security Stack",
     version="3.0.0",
     lifespan=lifespan,
-    # ✅ Ẩn /docs trong production
     docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
 )
 
 # ──────────────────────────────────────────────────────────
+# Exception Handler
+# ──────────────────────────────────────────────────────────
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global Error on {request.url.path}: {exc}", exc_info=True)
+    return Response(
+        content=f"Internal Server Error: {str(exc)}",
+        status_code=500
+    )
+
+# ──────────────────────────────────────────────────────────
 # Security Middleware
 # ──────────────────────────────────────────────────────────
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(","),
@@ -75,14 +89,19 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     """Thêm security headers vào mọi response."""
-    response: Response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Ẩn server info
-    response.headers.pop("server", None)
-    return response
+    try:
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Ẩn server info
+        if "server" in response.headers:
+            del response.headers["server"]
+        return response
+    except Exception as e:
+        logger.error(f"Middleware Error: {e}", exc_info=True)
+        return Response(content=f"Middleware Error: {str(e)}", status_code=500)
 
 
 # ──────────────────────────────────────────────────────────
@@ -199,4 +218,5 @@ if __name__ == "__main__":
     print("  student / demo123  (10 req/min, $1/day budget)")
     print("  teacher / teach456 (100 req/min, $1/day budget)")
     print(f"\nDocs: http://localhost:{port}/docs\n")
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    # Disabled reload to prevent infinite loop during logging (reload watching directory changes)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)

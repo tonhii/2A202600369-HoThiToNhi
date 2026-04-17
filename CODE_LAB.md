@@ -194,7 +194,19 @@ docker compose up
 ```
 
 Services nào được start? Chúng communicate thế nào?
-
+1. Bốn (4) Services nào vừa được Start lên:
+nginx (Người gác cổng/Load Balancer): Server duy nhất được phép "ló mặt" ra internet (mở cổng 80). Nó chịu trách nhiệm đón lõng toàn bộ request từ người dùng gửi tới.
+agent (Lập trình viên AI Backend): Đây là con bot AI (chạy bằng FastAPI) chứa thuật toán xử lý câu hỏi mimiting).
+qdrant (Thư viện Vector): Là database đặc biệt chuyên chứa các cụm vector kiến thức để AI lấy ra khi làm Agent RAG.
+2. Chúng giao tiếp (Communicate) với nhau như thế nào?
+Cách chúng giao tiếp khép kín cực kỳ chặt chẽ qua một mạng gọi là mạng internal (Network nội bộ do Docker tự vẽ ra):
+redis (Kho lựu đạn RAM): Database siêu tốc chạy trên RAM. Nó làm nhiệm vụ ghi nhớ lịch sử chat của user và đếm số lần gọi API để chống Spam , Rate L
+Khách hàng gọi vào: Khi bạn gửi request qua Postman hoặc CURL đến địa chỉ http://localhost, request đó sẽ đập thẳng vào ông gác cổng nginx.
+Nginx phân luồng: Nginx cầm lấy gói hàng đó, lén lút đẩy vào bên trong mạng rào chắn (internal) cho ông agent (cổng 8000) xử lý, người ngoài không thể tự gọi thẳng vào cổng 8000 của Agent được.
+Agent xử lý và hỏi Database:
+Agent lập tức gọi qua mạng nội bộ nhờ ông redis kiểm tra xem User này có đang spam quá giới hạn không. (Giao tiếp qua link: redis://redis:6379).
+Nếu qua cửa, Agent sẽ chạy qua nhà ông thư viện qdrant (link http://qdrant:6333) để tìm tài liệu.
+Cuối cùng, Agent gói câu trả lời trả ngược lại cho nginx để nginx quăng ra ngoài màn hình cho khách hàng.
 Test:
 ```bash
 # Health check
@@ -338,9 +350,13 @@ cd ../../04-api-gateway/develop
 ```
 
 **Nhiệm vụ:** Đọc `app.py` và tìm:
-- API key được check ở đâu?
-- Điều gì xảy ra nếu sai key?
-- Làm sao rotate key?
+API key được check ở đâu? Nó được kiểm tra ở hàm verify_api_key(api_key: str = Security(...)) ( dòng 39 file app.py).
+
+Điều gì xảy ra nếu sai key?
+
+Nếu User quên chèn key vào:  lỗi 401 (Missing API Key).
+Nếu User đưa key bậy bạ: lỗi 403 (Invalid API key). Code AI dưới đó sẽ hoàn toàn không chạy, chống tiêu tiền OpenAI.
+Làm sao Rotate Key? Key lấy từ biến môi trường os.getenv("AGENT_API_KEY"). Muốn đổi khóa, quản trị viên chỉ cần lên trang web (như trên Railway lúc nãy) nạp lại biến AGENT_API_KEY=KHOA-CHONG-TROM-MOI rồi restart server là xong.
 
 Test:
 ```bash
@@ -366,6 +382,11 @@ cd ../production
 
 **Nhiệm vụ:** 
 1. Đọc `auth.py` — hiểu JWT flow
+JWT (JSON Web Token) trong auth.py
+Khác với cái ổ khóa 1 API Key xài chung cho vạn người như, JWT giống như Thẻ Căn Cước Công Dân (CCCD) dạng số do cơ quan chính phủ (Server) cấp tạm thời.
+Trong file auth.py này, luồng kiểm tra (Flow) hoạt động như sau:
+Lúc cấp thẻ (authenticate_user & create_token): User gửi username và password cho Server. Nếu đúng pass ("student": "demo123"), Server lập tức tạo ra 1 đoạn mã lằng ngoằng (JWT Token). Mã này chính là giấy thông hành, có chứa tên User, chức vụ (vai trò Admin hay User), và có cả thời hạn hết hạn máy đo được (ở đây cài là 60 phút). Đoạn Token này được đóng một cục dấu mộc đỏ bí mật (SECRET_KEY) và quăng lại cho User cầm.
+Lúc kiểm tra đi ngang cửa (verify_token): Thay vì nộp API Key, giờ ở phần Header Authorization, User chìa tấm thẻ JWT ra quẹt vào cửa. Server chả cần phải lật đật xuống DB tra cứu cái token này có đúng không (tiết kiệm cực nhiều tài nguyên), nó tự dùng toán học giải mã dấu mộc, nếu dấu mộc chính hiệu thì nó đọc ra luôn thẳng tên User và cho qua. Thẻ hết hạn (quá 60p) vứt đi.
 2. Lấy token:
 ```bash
 python app.py
